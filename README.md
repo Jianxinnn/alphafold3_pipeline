@@ -2,7 +2,7 @@
 
 集成 **ColabFold (MSA)** + **AlphaFold3** 的一站式蛋白质结构预测工具。
 
-**服务器**: mgmt (219.228.149.80)
+**服务器**: mgmt
 
 ## 核心功能
 
@@ -43,7 +43,7 @@ af3_pipeline.sh full protein.fa /tmp/output
 脚本自动下载远程输入文件，计算完成后自动回传结果，无需手动 scp。
 ```bash
 # 输入在远程，输出回传远程
-af3_pipeline.sh full user@49.52.20.53:~/data/input.fa user@49.52.20.53:~/results/
+af3_pipeline.sh full user@mg:~/data/input.fa user@mg:~/results/
 ```
 
 ### 3. 多分子/复合物预测 (DNA/RNA/小分子)
@@ -113,7 +113,7 @@ af3_pipeline.sh full xx.fa /tmp/output
 af3_pipeline.sh full user@host:/path/xx.fa. user@host:/path/output
 # 比如准备的 fasta 文件在mg节点 /dataStor/home/jxtang/my_task.fa,  输出地址在 mg 节点 /dataStor/home/jxtang/output
 # 在 mgmt 执行程序
-af3_pipeline.sh full jxtang@49.52.20.53:/dataStor/home/jxtang/my_task.fa jxtang@49.52.20.53:/dataStor/home/jxtang/output
+af3_pipeline.sh full jxtang@mg:/dataStor/home/jxtang/my_task.fa jxtang@mg:/dataStor/home/jxtang/output
 ``` 
 
 
@@ -169,7 +169,7 @@ af3_pipeline.sh [模式] [选项] <输入> <输出>
 # 生成密钥 
 ssh-keygen -t rsa -b 4096      
 # 复制到 mg 服务器     
-ssh-copy-id your_user@49.52.20.53 
+ssh-copy-id your_user@mg
 # 验证
-ssh your_user@49.52.20.53  
+ssh your_user@mg  
 ```
