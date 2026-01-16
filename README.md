@@ -12,6 +12,7 @@
 *   **多分子类型支持**: 通过简单扩展的 FASTA 格式支持 **DNA, RNA, Ligands (SMILES/CCD)** 混合复合物预测。
 *   **批处理**: 支持单任务、批量循环或并行 (parallel) 运行。
 *   **模块化设计**: 支持单独运行 MSA、JSON 生成或 AF3 预测步骤。
+*   **断点恢复**: 支持从中断点继续执行（`resume` 模式）。
 
 ## 快速开始
 
@@ -25,28 +26,63 @@
     ```bash
     af3_pipeline.sh full input.fa /tmp/output
     ```
-    
+
 3. **查看帮助** （查看详细的帮助文档）
     ```bash
     af3_pipeline.sh -h
     ```
 
+## 运行模式
+
+| 模式 | 描述 | MSA 来源 |
+|------|------|----------|
+| `full` | **完整流程** (FASTA -> ColabFold MSA -> AF3) | ColabFold (API/Local) |
+| `msa` | 仅计算 MSA | ColabFold (API/Local) |
+| `af3` | **原生预测** (FASTA -> AF3) | AF3 内置 MSA 计算 |
+| `resume` | 恢复执行（从任务目录继续） | - |
+| `json` | 仅转换 FASTA 到 AF3 JSON | 不含 MSA |
+| `transfer`| 仅传输结果 | - |
+
+### full vs af3 模式对比
+
+| 特性 | `full` 模式 | `af3` 模式 |
+|------|-------------|------------|
+| MSA 计算 | ColabFold (API 或 Local) | AlphaFold3 内置 |
+| 速度 | 较慢（MSA 预计算） | 较快（一步完成） |
+| 灵活性 | 可单独调试 MSA 步骤 | 一体化运行 |
+| 推荐场景 | 生产环境、大批量 | 快速测试、小批量 |
+
 ## 常见用法示例
 
-### 1. 标准蛋白质预测
+### 1. 标准蛋白质预测（推荐）
 ```bash
-# 最常用的全流程模式
+# 使用 ColabFold MSA 的完整流程
 af3_pipeline.sh full protein.fa /tmp/output
 ```
 
-### 2. 远程文件处理 (推荐)
+### 2. 原生预测（使用 AF3 内置 MSA）
+```bash
+# 无需预计算 MSA，直接运行 AF3
+af3_pipeline.sh af3 protein.fa /tmp/output
+```
+
+### 3. 恢复中断的任务
+```bash
+# MSA 完成后 AF3 中断，从断点继续
+af3_pipeline.sh resume /tmp/output/task_name
+
+# 恢复执行并传输结果到远程
+af3_pipeline.sh resume /tmp/output/task_name --transfer-to user@host:/path
+```
+
+### 4. 远程文件处理 (推荐)
 脚本自动下载远程输入文件，计算完成后自动回传结果，无需手动 scp。
 ```bash
 # 输入在远程，输出回传远程
 af3_pipeline.sh full user@49.52.20.53:~/data/input.fa user@49.52.20.53:~/results/
 ```
 
-### 3. 多分子/复合物预测 (DNA/RNA/小分子)
+### 5. 多分子/复合物预测 (DNA/RNA/小分子)
 在 FASTA 中使用特殊格式支持非蛋白分子：
 ```text
 >complex_job
@@ -61,14 +97,14 @@ MKFLILLFN...
 ```
 所有待预测的序列都应当存储在一个 `xx.fa` 文件中，`xx.fa` 格式如下：
 对于单体蛋白而言直接是
-    
+
 ```bash
 >proteinA
 AAAAAAAAAAAAAAAAA
 ```
-    
+
 对于蛋白复合物 AB （或者更多
-    
+
 ```bash
 >proteinA:proteinB
 AAAAAAAAAAAAAAAAA:BBBBBBBBBB
@@ -82,7 +118,7 @@ AAAAAAAAAAAAAAAAA|2
 ```
 
 对于蛋白质-小分子，下面两种写法都可以，支持 CCD 以及 smiles 输入，`|` 右侧类型表示输入的是 ligand/ccd 还是下面的 rna/dna
-    
+
 ```bash
 >ProteinA:Ligandsmiles
 AAAAAAAAAAAAAAAAA:smiles|C1=NC(=C2C(=N1)N(C=N2)
@@ -92,7 +128,7 @@ AAAAAAAAAAAAAAA:ccd|ATP
 AAAAAAAAAAAAAAA:ccd|ATP|2
 ```
 对于蛋白质-核酸
-    
+
 ```bash
 >ProteinA:NucleDNA
 AAAAAAAAAAAAAAA:dna|AAATTGTT
@@ -105,7 +141,7 @@ AAAAAAAAAAAAAAA:rna|AAAUUGUU
 af3_pipeline.sh full xx.fa /tmp/output
 ```
 
-### 4. 远程服务
+### 6. 远程服务
 目的：让任务的输入和输出存储在 `mg` 节点，运行执行程序地址在 `mgmt` 节点
 
 实现：脚本支持通过 `rsync` 实时跨服务器执行，只需输入和输出远端地址即可
@@ -114,10 +150,10 @@ af3_pipeline.sh full user@host:/path/xx.fa. user@host:/path/output
 # 比如准备的 fasta 文件在mg节点 /dataStor/home/jxtang/my_task.fa,  输出地址在 mg 节点 /dataStor/home/jxtang/output
 # 在 mgmt 执行程序
 af3_pipeline.sh full jxtang@49.52.20.53:/dataStor/home/jxtang/my_task.fa jxtang@49.52.20.53:/dataStor/home/jxtang/output
-``` 
+```
 
 
-### 4. 高效 MSA 策略
+### 7. 高效 MSA 策略
 
 API 调用的是 `api.colabfold.com` 提供的 MSA 远程服务，对小批量（小于三十个）友好；
 
@@ -130,7 +166,7 @@ af3_pipeline.sh full -m api input.fa /tmp/output
 af3_pipeline.sh full -m local input.fa /tmp/output
 ```
 
-### 5. 仅生成 JSON (用于检查或手动提交)
+### 8. 仅生成 JSON (用于检查或手动提交)
 通过 `json` 模式支持 alphafold 输入文件制作，不含 MSA 与 template
 ```bash
 af3_pipeline.sh json input.fa /tmp/output
@@ -144,32 +180,36 @@ af3_pipeline.sh [模式] [选项] <输入> <输出>
 
 | 模式 | 描述 |
 |------|------|
-| `full` | **完整流程** (FASTA -> MSA -> AF3) |
-| `msa` | 仅计算 MSA |
-| `af3` | 仅运行 AF3 (需提供含 MSA 的目录) |
+| `full` | **完整流程** (FASTA -> ColabFold MSA -> AF3) |
+| `msa` | 仅计算 ColabFold MSA |
+| `af3` | 原生预测 (FASTA -> AF3，使用 AF3 内置 MSA) |
+| `resume` | 恢复执行（从任务目录继续） |
 | `json` | 仅转换 FASTA 到 AF3 JSON |
 | `transfer`| 仅传输结果 |
 
 **常用选项:**
 *   `-g, --gpu ID`: 指定 GPU (e.g., `-g 0`)
 *   `-n, --task-name NAME`: 指定任务名 (默认使用输入文件名)
+*   `-m, --msa-method METHOD`: MSA 方式 `api` 或 `local` (仅 full/msa 模式)
 *   `--no-template`: 禁用模板 (适用于 de novo 蛋白)
+*   `--transfer-to PATH`: 完成后传输结果到指定路径
 *   `--keep-temp`: 保留临时目录 (调试用)
 
 ## 输出结构
 ```text
 /tmp/output/task_name/
-├── msa/               # MSA 结果 (json)
+├── msa/               # MSA 结果 (json) - full/msa 模式
+├── json/              # 输入 JSON - af3 模式
 ├── af3/               # 结构文件 (cif) 和摘要 (json)
 └── logs/              # 运行日志
 ```
 
 ## SSH 免密配置（远程文件传输需要）
 ```bash
-# 生成密钥 
-ssh-keygen -t rsa -b 4096      
-# 复制到 mg 服务器     
-ssh-copy-id your_user@49.52.20.53 
+# 生成密钥
+ssh-keygen -t rsa -b 4096
+# 复制到 mg 服务器
+ssh-copy-id your_user@49.52.20.53
 # 验证
-ssh your_user@49.52.20.53  
+ssh your_user@49.52.20.53
 ```
