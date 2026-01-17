@@ -96,44 +96,42 @@ MKFLILLFN...
 :smiles|CC(=O)OC1=CC=CC=C1C(=O)O
 ```
 所有待预测的序列都应当存储在一个 `xx.fa` 文件中，`xx.fa` 格式如下：
-对于单体蛋白而言直接是
+e.g., 对于单体蛋白而言是
 
 ```bash
 >proteinA
-AAAAAAAAAAAAAAAAA
+MKFLILLFN...
 ```
 
 对于蛋白复合物 AB （或者更多
 
 ```bash
 >proteinA:proteinB
-AAAAAAAAAAAAAAAAA:BBBBBBBBBB
+MKFLILLFN:MGLSDGEW
 ```
-对于蛋白复合物 A 的同源寡聚 (下面两种写法都可以, `|` 右侧的数字表示复制两次)
+对于蛋白复合物 A 的同源寡聚
 ```bash
 >proteinA:proteinA1
-AAAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAA
->proteinA|2
-AAAAAAAAAAAAAAAAA|2
+MKFLILLFN:MKFLILLFN
 ```
 
 对于蛋白质-小分子，下面两种写法都可以，支持 CCD 以及 smiles 输入，`|` 右侧类型表示输入的是 ligand/ccd 还是下面的 rna/dna
 
 ```bash
 >ProteinA:Ligandsmiles
-AAAAAAAAAAAAAAAAA:smiles|C1=NC(=C2C(=N1)N(C=N2)
+MKFLILLFN:smiles|C1=NC(=C2C(=N1)N(C=N2)
 >ProteinA:LigandCCD
-AAAAAAAAAAAAAAA:ccd|ATP
+MKFLILLFN:ccd|ATP
 >ProteinA:LigandCCDA:LigandCCDA
-AAAAAAAAAAAAAAA:ccd|ATP|2
+MKFLILLFN:ccd|ATP|2
 ```
 对于蛋白质-核酸
 
 ```bash
 >ProteinA:NucleDNA
-AAAAAAAAAAAAAAA:dna|AAATTGTT
+MKFLILLFN:dna|AAATTGTT
 >ProteinA:NucleRNA
-AAAAAAAAAAAAAAA:rna|AAAUUGUU
+MKFLILLFN:rna|AAAUUGUU
 ```
 同一个 fa 文件中上述的每个任务都可以写在一个文件中， 然后直接运行结构预测：
 
@@ -145,6 +143,7 @@ af3_pipeline.sh full xx.fa /tmp/output
 目的：让任务的输入和输出存储在 `mg` 节点，运行执行程序地址在 `mgmt` 节点
 
 实现：脚本支持通过 `rsync` 实时跨服务器执行，只需输入和输出远端地址即可
+
 ```bash
 af3_pipeline.sh full user@host:/path/xx.fa. user@host:/path/output
 # 比如准备的 fasta 文件在mg节点 /dataStor/home/jxtang/my_task.fa,  输出地址在 mg 节点 /dataStor/home/jxtang/output
